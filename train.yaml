@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: josh-transvod-training-swinb-multi
+  
+spec:
+  restartPolicy: Never
+  
+  volumes:
+  - name: shmdir
+    emptyDir:
+      medium: Memory
+  - name: pvc-volume
+    persistentVolumeClaim:
+       claimName: team1-native-pvc
+
+  imagePullSecrets:
+  - name: sanghyunjo
+  
+  containers:
+  - name: gpu-container
+    image: hub.ziovision.ai/transvod/transvod:torch190
+    volumeMounts:
+    - mountPath: /dev/shm
+      name: shmdir
+    - mountPath: /home/team1
+      name: pvc-volume
+    env:
+    - name: HOME
+      value: /workspace/
+    - name: PYTHONUSERBASE
+      value: /workspace/.local
+    command:
+      - "/bin/sh"
+      - "-c"
+    args:
+      - >-
+        nvidia-smi &&
+        
+        cd /home/team1/josh/projects/TransVOD/models/ops/ &&
+        python setup.py build develop --user &&
+        cd /home/team1/josh/projects/TransVOD &&
+        GPUS_PER_NODE=3 ./tools/run_dist_launch.sh $1 r50 $2 configs/r50_train_multi.sh
+
+
+    securityContext:
+      allowPrivilegeEscalation: false
+
+    resources:
+      requests:
+        nvidia.com/gpu: 3 # GPU 갯수(최대 4)
+      limits:
+        nvidia.com/gpu: 3
