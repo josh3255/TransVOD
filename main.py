@@ -32,8 +32,8 @@ def get_args_parser():
     parser.add_argument('--lr_backbone', default=2e-5, type=float)
     parser.add_argument('--lr_linear_proj_names', default=['reference_points', 'sampling_offsets'], type=str, nargs='+')
     parser.add_argument('--lr_linear_proj_mult', default=0.1, type=float)
-    parser.add_argument('--batch_size', default=2, type=int)
-    parser.add_argument('--weight_decay', default=1e-4, type=float)
+    parser.add_argument('--batch_size', default=4, type=int)
+    parser.add_argument('--weight_decay', default=2e-5, type=float)
     parser.add_argument('--epochs', default=15, type=int)
     parser.add_argument('--lr_drop', default=5, type=int)
     parser.add_argument('--lr_drop_epochs', default=None, type=int, nargs='+')
@@ -114,7 +114,7 @@ def get_args_parser():
     # dataset parameters
     parser.add_argument('--dataset_file', default='vid_multi')
     parser.add_argument('--coco_path', default='./data/coco', type=str)
-    parser.add_argument('--vid_path', default='./data/vid', type=str)
+    parser.add_argument('--vid_path', default='/media/042b457e-d855-4182-bc38-8f182e78adce1/KITTI/', type=str)
     parser.add_argument('--coco_pretrain', default=False, action='store_true')
     parser.add_argument('--coco_panoptic_path', type=str)
     parser.add_argument('--remove_difficult', action='store_true')
@@ -135,7 +135,11 @@ def get_args_parser():
 
 
 def main(args):
+    torch.backends.cudnn.benchmark = True
+    torch.backends.cudnn.enabled = False
+
     print(args.dataset_file, 11111111)
+
     if args.dataset_file == "vid_single":
         from engine_single import evaluate, train_one_epoch
         import util.misc as utils
@@ -226,7 +230,8 @@ def main(args):
         optimizer = torch.optim.AdamW(param_dicts, lr=args.lr,
                                       weight_decay=args.weight_decay)
     print(args.lr_drop_epochs)
-    lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.lr_drop_epochs)
+    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs, eta_min=0.0000001)
+    # lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, args.lr_drop_epochs)
 
     if args.distributed:
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu], find_unused_parameters=True)
